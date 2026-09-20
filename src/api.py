@@ -26,10 +26,18 @@ def get_url_by_code(db: Session, short_code: str):
 
 @router.post("/url", response_model=schemas.URLInfo)
 def create_url(url: schemas.URLCreate, db: Session = Depends(get_db)):
-    while True:
-        chars = secrets.token_urlsafe(4)[:5]
-        if not get_url_by_code(db, chars):
-            break
+    if url.custom_code:
+        custom_code = url.custom_code.strip()
+
+        existing = get_url_by_code(db, custom_code)
+        if existing:
+            raise HTTPException(status_code=400, detail="Custom code already taken.")
+        chars = custom_code
+    else:
+        while True:
+            chars = secrets.token_urlsafe(4)[:5]
+            if not get_url_by_code(db, chars):
+                break
 
     db_url = models.URLItem(target_url=str(url.target_url), short_code=chars)
     db.add(db_url)

@@ -2,8 +2,13 @@ from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, HttpUrl
+from datetime import datetime
+from typing import Optional
+
 class URLCreate(BaseModel):
     target_url: HttpUrl
+    custom_code: Optional[str] = None
 
 class URLInfo(BaseModel):
     target_url: str
