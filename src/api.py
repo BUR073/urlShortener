@@ -8,7 +8,6 @@ from database import SessionLocal
 import models
 import schemas
 
-# Create an APIRouter instance instead of FastAPI()
 router = APIRouter()
 
 def get_db():
@@ -22,9 +21,15 @@ def get_db():
 def read_root():
     return RedirectResponse(url="/docs")
 
+def get_url_by_code(db: Session, short_code: str):
+    return db.query(models.URLItem).filter(models.URLItem.short_code == short_code).first()
+
 @router.post("/url", response_model=schemas.URLInfo)
 def create_url(url: schemas.URLCreate, db: Session = Depends(get_db)):
-    chars = secrets.token_urlsafe(4)[:5]
+    while True:
+        chars = secrets.token_urlsafe(4)[:5]
+        if not get_url_by_code(db, chars):
+            break
 
     db_url = models.URLItem(target_url=str(url.target_url), short_code=chars)
     db.add(db_url)
@@ -32,9 +37,10 @@ def create_url(url: schemas.URLCreate, db: Session = Depends(get_db)):
     db.refresh(db_url)
     return db_url
 
+
 @router.get("/{short_code}")
 def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
-    db_url = db.query(models.URLItem).filter(models.URLItem.short_code == short_code).first()
+    db_url = get_url_by_code(db, short_code)
 
     if db_url is None:
         raise HTTPException(status_code=404, detail="Short URL not found")
@@ -47,7 +53,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
 
 @router.get("/stats/{short_code}", response_model=schemas.URLInfo)
 def get_url_stats(short_code: str, db: Session = Depends(get_db)):
-    db_url = db.query(models.URLItem).filter(models.URLItem.short_code == short_code).first()
+    db_url = get_url_by_code(db, short_code)
 
     if db_url is None:
         raise HTTPException(status_code=404, detail="Short URL not found")
